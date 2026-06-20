@@ -1,42 +1,5 @@
 # finetune.py — YOLOv8 fine-tuning for visual violation detection
-#
-# ─────────────────────────────────────────────────────────────────────────────
-# DATASET PLACEHOLDERS — replace the paths below with your downloaded datasets
-# ─────────────────────────────────────────────────────────────────────────────
-#
-# TASK 1: Helmet & No-Helmet detection
-#   Dataset options (pick one):
-#   → Roboflow "Helmet Detection" dataset
-#     https://universe.roboflow.com/roboflow-universe-projects/hard-hat-universe
-#   → Kaggle "Helmet Detection Dataset"
-#     https://www.kaggle.com/datasets/andrewmvd/hard-hat-detection
-#   → SHWD (Safety Helmet Wearing Dataset) — 7000+ images
-#     https://github.com/njvisionpower/Safety-Helmet-Wearing-Dataset
-#   Format required: YOLOv8 (images/ + labels/ folders with .txt files)
-#
-# TASK 2: Seatbelt detection
-#   → Roboflow "Seat Belt Detection"
-#     https://universe.roboflow.com/seatbelt-pkxey/seatbelt-detection-y7gpk
-#   → Kaggle "Seatbelt Detection"
-#     https://www.kaggle.com/datasets/sarangdilipjodh/seatbeltdetection
-#
-# TASK 3: Triple riding (person count on motorcycle)
-#   → Roboflow "Motorcycle Rider Detection"
-#     https://universe.roboflow.com/new-workspace-ooghz/motorcycle-rider
-#   → COCO dataset filtered for person + motorcycle
-#     https://cocodataset.org  (use scripts/filter_coco.py below)
-#   → Kaggle "Vehicle and Person Detection"
-#     https://www.kaggle.com/datasets/sshikamaru/car-object-detection
-#
-# TASK 4: License plate detection
-#   → Roboflow "License Plate Recognition"
-#     https://universe.roboflow.com/roboflow-universe-projects/license-plate-recognition-rxg4e
-#   → Indian plates specifically:
-#     https://www.kaggle.com/datasets/tustunkok/vehicle-license-plate-detection
-#   → OpenALPR benchmark dataset:
-#     https://github.com/openalpr/benchmarks
-#
-# ─────────────────────────────────────────────────────────────────────────────
+
 
 import os
 import yaml
