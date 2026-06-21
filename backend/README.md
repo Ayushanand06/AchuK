@@ -28,6 +28,19 @@ Open the interactive docs at <http://127.0.0.1:8000/docs>.
 > ~200 MB). Call `GET /api/health/models` once to warm up and to print each
 > model's class labels.
 
+### GPU / CPU
+
+`torch`/`torchvision` are pinned to the **CUDA 12.4** build, so on a machine with
+an NVIDIA GPU a plain `uv sync` installs CUDA wheels and the YOLO models **and**
+EasyOCR use the GPU automatically — no code changes. These wheels also run on
+CPU-only machines (they just won't find a GPU).
+
+- **Older NVIDIA driver:** change the index URL in `pyproject.toml`
+  (`[[tool.uv.index]]`) from `.../whl/cu124` to `.../whl/cu121`, then `uv lock`.
+- **Lean CPU-only install:** point it at `.../whl/cpu` (much smaller download).
+
+> Uses Git LFS for model weights — run `git lfs install` once, then `git lfs pull`.
+
 ## Project layout
 
 ```
