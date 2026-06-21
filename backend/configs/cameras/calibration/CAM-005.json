@@ -1,0 +1,10 @@
+{
+  "stop_line_y": 430,
+  "signal_roi": [1140, 70, 1200, 200],
+  "lane_boundary_x": 640,
+  "expected_left_dx": 1.0,
+  "no_parking_zones": [
+    [[80, 360], [340, 360], [340, 520], [80, 520]]
+  ],
+  "fps": 25
+}
