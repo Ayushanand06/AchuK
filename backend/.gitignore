@@ -7,3 +7,6 @@ output/
 
 # Large demo input video (not versioned)
 trafficVideo/
+
+# Auto-downloaded COCO weights (ultralytics fetches on first run)
+/yolov8n.pt
