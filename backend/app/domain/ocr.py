@@ -1,8 +1,8 @@
 # ocr.py — License plate detection + OCR
 # Pipeline: detect plate region → super-resolution → PaddleOCR → validate
-
 import cv2
 import re
+import torch
 import numpy as np
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -61,7 +61,7 @@ class PlateOCR:
             return PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
         except ImportError:
             import easyocr
-            return easyocr.Reader(["en"], gpu=False)
+            return easyocr.Reader(["en"], gpu=torch.cuda.is_available())
 
     # ── Detect plate regions in full frame ───────────────────────────────────
 
