@@ -1,6 +1,5 @@
 import { C } from '../theme.js'
 
-// Standard dashboard card.
 export default function Panel({ children, style }) {
   return (
     <div style={{

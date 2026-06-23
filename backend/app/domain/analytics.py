@@ -1,4 +1,3 @@
-# analytics.py — Violation analytics, trend reporting & PDI patrol optimizer
 
 import json, os, glob
 from collections import defaultdict
@@ -12,12 +11,12 @@ from app.config import OUTPUT_DIR
 @dataclass
 class PatrolRecommendation:
     zone: str
-    priority: str        # "critical" | "high" | "predicted"
+    priority: str
     reason: str
     window: str
     units_needed: int
-    expected: int = 0        # forecast violation count over the horizon
-    multiplier: float = 0.0  # ratio vs the zone's average window load
+    expected: int = 0
+    multiplier: float = 0.0
 
 
 class AnalyticsEngine:
@@ -32,7 +31,6 @@ class AnalyticsEngine:
     Output dir layout: output/challans/YYYY-MM-DD/<challan_id>/record.json
     """
 
-    # ── Record loading ─────────────────────────────────────────────────────────
 
     def _load_records(self, days: int = 7) -> List[dict]:
         records = []
@@ -62,7 +60,6 @@ class AnalyticsEngine:
                     continue
         return records
 
-    # ── Weekly summary ─────────────────────────────────────────────────────────
 
     def weekly_report(self) -> dict:
         """Full weekly summary dict ready for rendering or export."""
@@ -96,7 +93,6 @@ class AnalyticsEngine:
             "top_zones":    top_zones,
         }
 
-    # ── PDI patrol recommendations ────────────────────────────────────────────
 
     def patrol_recommendations(self) -> List[PatrolRecommendation]:
         """
@@ -145,7 +141,6 @@ class AnalyticsEngine:
         recs.sort(key=lambda r: {"critical": 0, "high": 1, "predicted": 2}[r.priority])
         return recs[:8]
 
-    # ── Zone × hour intensity matrix ───────────────────────────────────────────
 
     def zone_hour_matrix(self, days: int = 7) -> dict:
         """
@@ -168,7 +163,6 @@ class AnalyticsEngine:
         mx = max((max(row) for row in matrix), default=0)
         return {"zones": ordered, "matrix": matrix, "max": mx}
 
-    # ── Camera FP rates ────────────────────────────────────────────────────────
 
     def camera_false_positive_rates(self) -> Dict[str, float]:
         records = self._load_records(days=30)
@@ -181,7 +175,6 @@ class AnalyticsEngine:
                 fps[cam] += 1
         return {cam: round(fps[cam] / max(totals[cam], 1), 4) for cam in totals}
 
-    # ── Decision buckets (for the Operations dashboard) ────────────────────────
 
     def buckets(self, days: int = 7) -> dict:
         """
@@ -203,7 +196,6 @@ class AnalyticsEngine:
             "total": len(records),
         }
 
-    # ── Enforcement KPIs ──────────────────────────────────────────────────────
 
     def enforcement_kpis(self) -> dict:
         records = self._load_records(days=7)
@@ -223,7 +215,6 @@ class AnalyticsEngine:
             "camera_uptime":       0.961,
         }
 
-    # ── Private helpers ───────────────────────────────────────────────────────
 
     @staticmethod
     def _count_by(records, key) -> Dict[str, int]:

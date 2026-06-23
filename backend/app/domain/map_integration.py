@@ -1,22 +1,3 @@
-# map_integration.py — MapMyIndia (Mappls) full traffic intelligence integration
-#
-# ─────────────────────────────────────────────────────────────────────────────
-# SETUP: Get your free API key from https://apis.mappls.com
-# Add to config.py:
-#   MAPMYINDIA_API_KEY     = "your_rest_api_key"
-#   MAPMYINDIA_CLIENT_ID   = "your_client_id"       # for OAuth token
-#   MAPMYINDIA_CLIENT_SECRET = "your_client_secret"
-# ─────────────────────────────────────────────────────────────────────────────
-#
-# APIs used in this file:
-#   1. Mappls Maps JS SDK         → interactive map rendering
-#   2. Mappls Geocoding API       → camera address → lat/lng
-#   3. Mappls Reverse Geocoding   → lat/lng → road name / zone
-#   4. Mappls Route API           → diversion route suggestions
-#   5. Mappls Traffic API         → live traffic overlay
-#   6. Mappls Nearby API          → find police stations near hotspot
-#
-# All API docs: https://developer.mappls.com/mapping/maps-api/
 
 import json
 import time
@@ -25,7 +6,6 @@ from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, asdict
 
-# ── Internal imports ──────────────────────────────────────────────────────────
 try:
     from app.config import (
         MAPMYINDIA_API_KEY,
@@ -38,7 +18,6 @@ except ImportError:
     MAPMYINDIA_CLIENT_SECRET= "YOUR_CLIENT_SECRET_HERE"
 
 
-# ── Data structures ────────────────────────────────────────────────────────────
 
 @dataclass
 class ViolationPin:
@@ -56,7 +35,7 @@ class ViolationPin:
     timestamp:      str
     camera_id:      str
     zone:           str
-    severity:       str          # "critical" | "high" | "medium"
+    severity:       str
 
 
 @dataclass
@@ -64,7 +43,7 @@ class HeatZone:
     """Aggregated zone data for heatmap layer."""
     lat:            float
     lng:            float
-    intensity:      float        # 0–1 normalised violation density
+    intensity:      float
     total_violations: int
     top_violation:  str
     zone_name:      str
@@ -74,17 +53,12 @@ class HeatZone:
 class PatrolRoute:
     """Recommended patrol route from PDI engine."""
     route_id:       str
-    waypoints:      List[Tuple[float, float]]   # list of (lat, lng)
+    waypoints:      List[Tuple[float, float]]
     priority_zones: List[str]
     estimated_km:   float
-    shift:          str          # "morning" | "afternoon" | "evening" | "night"
+    shift:          str
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  1. MAPPLS TOKEN MANAGER
-#  The Mappls REST APIs require an OAuth2 bearer token.
-#  This class fetches and auto-refreshes the token.
-# ══════════════════════════════════════════════════════════════════════════════
 
 class MapplsTokenManager:
     """
@@ -124,10 +98,6 @@ class MapplsTokenManager:
         return {"Authorization": f"Bearer {self.get_token()}"}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  2. MAPPLS REST API CLIENT
-#  Wraps Geocoding, Reverse Geocoding, Route, and Nearby APIs
-# ══════════════════════════════════════════════════════════════════════════════
 
 class MapplsAPIClient:
     """
@@ -161,8 +131,6 @@ class MapplsAPIClient:
                             params={"addr": address, "region": "IND"}, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        # Static-key geo_code returns {"results":[{latitude,longitude}], ...};
-        # tolerate the older copResults shape too.
         results = data.get("results") or data.get("copResults")
         if isinstance(results, list):
             results = results[0] if results else None
@@ -172,7 +140,6 @@ class MapplsAPIClient:
         lng = float(results.get("longitude", results.get("lng", 0)) or 0)
         return (lat, lng) if lat and lng else None
 
-    # ── Reverse Geocoding: (lat, lng) → road / zone info ─────────────────────
 
     def reverse_geocode(self, lat: float, lng: float) -> dict:
         """Road / locality / district from GPS coordinates."""
@@ -189,7 +156,6 @@ class MapplsAPIClient:
             "pincode":  result.get("pincode", ""),
         }
 
-    # ── Nearby API: find police stations near a hotspot ───────────────────────
 
     def find_nearby_police(
         self,
@@ -221,7 +187,6 @@ class MapplsAPIClient:
             })
         return out
 
-    # ── Route API: build patrol route through waypoints ───────────────────────
 
     def get_patrol_route(
         self,
@@ -250,7 +215,6 @@ class MapplsAPIClient:
             "waypoint_order":   list(range(len(waypoints))),
         }
 
-    # ── Distance Matrix: police station → hotspot travel time ─────────────────
 
     def distance_matrix(
         self,
@@ -288,10 +252,6 @@ class MapplsAPIClient:
         return matrix
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  3. VIOLATION MAP DATA BUILDER
-#  Converts VisionEnforce challan records into map-ready data structures
-# ══════════════════════════════════════════════════════════════════════════════
 
 class ViolationMapBuilder:
     """
@@ -305,14 +265,12 @@ class ViolationMapBuilder:
       - Produce the full JSON payload consumed by the JS frontend
     """
 
-    # Severity thresholds based on CVCS score
     SEVERITY_MAP = {
         (0.85, 1.00): "critical",
         (0.70, 0.85): "high",
         (0.00, 0.70): "medium",
     }
 
-    # Violation type → icon name (for Mappls custom marker icons)
     VIOLATION_ICONS = {
         "No helmet":         "helmet",
         "No seatbelt":       "seatbelt",
@@ -323,7 +281,6 @@ class ViolationMapBuilder:
         "Illegal parking":   "parking",
     }
 
-    # Violation type → marker colour (hex)
     VIOLATION_COLORS = {
         "No helmet":          "#D85A30",
         "No seatbelt":        "#BA7517",
@@ -342,7 +299,6 @@ class ViolationMapBuilder:
         self.cameras = camera_registry
         self._api    = MapplsAPIClient()
 
-    # ── Build individual violation pins ───────────────────────────────────────
 
     def build_pins(self, challan_records: List[dict]) -> List[ViolationPin]:
         """
@@ -372,7 +328,6 @@ class ViolationMapBuilder:
             ))
         return pins
 
-    # ── Build heatmap zones ───────────────────────────────────────────────────
 
     def build_heatmap(self, pins: List[ViolationPin]) -> List[HeatZone]:
         """
@@ -410,7 +365,6 @@ class ViolationMapBuilder:
 
         return sorted(zones, key=lambda z: z.intensity, reverse=True)
 
-    # ── Build PDI patrol routes ───────────────────────────────────────────────
 
     def build_patrol_routes(
         self,
@@ -424,7 +378,6 @@ class ViolationMapBuilder:
         patrol_recs: output from AnalyticsEngine.patrol_recommendations()
         shift:       "morning" | "afternoon" | "evening" | "night"
         """
-        # Pick top 5 zones for this shift
         top_zones = [r for r in patrol_recs
                      if r.get("priority") in ("critical", "high")][:5]
         if len(top_zones) < 2:
@@ -456,7 +409,6 @@ class ViolationMapBuilder:
             shift          = shift,
         )]
 
-    # ── Build complete map JSON payload ───────────────────────────────────────
 
     def build_map_payload(
         self,
@@ -509,7 +461,6 @@ class ViolationMapBuilder:
             "timestamp":         datetime.utcnow().isoformat() + "Z",
         }
 
-    # ── Private helpers ───────────────────────────────────────────────────────
 
     def _get_severity(self, cvcs_score: float) -> str:
         for (low, high), label in self.SEVERITY_MAP.items():

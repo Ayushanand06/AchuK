@@ -1,8 +1,3 @@
-# store.py — read-side access to the file-based challan store.
-#
-# Records are written by ChallanGenerator to:
-#   {OUTPUT_DIR}/YYYY-MM-DD/<challan_id>/record.json   (+ evidence.jpg, plate_crop.jpg)
-# This module scans that tree for listing, filtering and single-record lookup.
 
 import json
 import logging
@@ -18,7 +13,6 @@ def _iter_record_paths():
     base = Path(OUTPUT_DIR)
     if not base.exists():
         return
-    # newest date dirs first
     for date_dir in sorted([p for p in base.iterdir() if p.is_dir()], reverse=True):
         for rec_dir in date_dir.iterdir():
             rec = rec_dir / "record.json"
@@ -31,8 +25,8 @@ def list_challans(
     zone: Optional[str] = None,
     plate: Optional[str] = None,
     decision: Optional[str] = None,
-    date: Optional[str] = None,          # YYYY-MM-DD
-    pending_review: bool = False,        # decision == review AND not yet actioned
+    date: Optional[str] = None,
+    pending_review: bool = False,
     limit: int = 200,
     offset: int = 0,
 ) -> List[dict]:
@@ -61,7 +55,6 @@ def list_challans(
                 continue
         out.append(rec)
 
-    # sort newest first by timestamp, then page
     out.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
     return out[offset:offset + limit]
 
@@ -115,7 +108,7 @@ def save_review(challan_id: str, action: str, corrected_plate: Optional[str] = N
         return None
     sidecar = {
         "challan_id": challan_id,
-        "action": action,                      # issue | reject | escalate
+        "action": action,
         "corrected_plate": corrected_plate,
         "officer_id": officer_id,
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
@@ -135,7 +128,6 @@ def evidence_url(record: dict) -> Optional[str]:
     try:
         rel = Path(img_path).resolve().relative_to(Path(OUTPUT_DIR).resolve())
     except Exception:
-        # Fall back to reconstructing from date + challan_id.
         ts = record.get("timestamp", "")
         date = ts[:10] if ts else ""
         cid = record.get("challan_id", "")

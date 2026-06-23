@@ -1,5 +1,3 @@
-# preprocessing.py — Image enhancement pipeline
-# Handles: low light, rain, motion blur, shadow, glare
 
 import cv2
 import numpy as np
@@ -29,7 +27,6 @@ class ImagePreprocessor:
         )
         self._frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)
 
-    # ── Public entry point ────────────────────────────────────────────────────
 
     def process(self, frame: np.ndarray, is_video: bool = False) -> np.ndarray:
         """
@@ -53,7 +50,6 @@ class ImagePreprocessor:
         """
         return self._enhance_lighting(self._resize(frame))
 
-    # ── Step 1: Resize ────────────────────────────────────────────────────────
 
     def _resize(self, frame: np.ndarray) -> np.ndarray:
         h, w = frame.shape[:2]
@@ -64,7 +60,6 @@ class ImagePreprocessor:
         return cv2.resize(frame, (TARGET_WIDTH, new_h),
                           interpolation=cv2.INTER_LINEAR)
 
-    # ── Step 2: CLAHE lighting enhancement ───────────────────────────────────
 
     def _enhance_lighting(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -78,7 +73,6 @@ class ImagePreprocessor:
         lab_eq = cv2.merge([l_eq, a, b])
         return cv2.cvtColor(lab_eq, cv2.COLOR_LAB2BGR)
 
-    # ── Step 3: Temporal averaging (motion-blur reduction) ───────────────────
 
     def _temporal_average(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -91,7 +85,6 @@ class ImagePreprocessor:
         avg = np.mean(np.array(self._frame_buffer), axis=0)
         return np.clip(avg, 0, 255).astype(np.uint8)
 
-    # ── Step 4: Shadow removal ────────────────────────────────────────────────
 
     def _remove_shadows(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -112,7 +105,6 @@ class ImagePreprocessor:
 
         return cv2.merge(result_planes)
 
-    # ── Step 5: Rain-streak suppression ──────────────────────────────────────
 
     def _suppress_rain(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -120,11 +112,8 @@ class ImagePreprocessor:
         A guided filter smooths streaks while preserving edges
         (unlike Gaussian blur which blurs license plates too).
         """
-        # guided filter approximation via bilateral filter
-        # (OpenCV's ximgproc.guidedFilter needs the contrib build)
         return cv2.bilateralFilter(frame, d=5, sigmaColor=50, sigmaSpace=50)
 
-    # ── Utility: estimate lighting score (0–1) ────────────────────────────────
 
     @staticmethod
     def lighting_score(frame: np.ndarray) -> float:
@@ -134,14 +123,12 @@ class ImagePreprocessor:
         """
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         mean_lum = float(np.mean(gray)) / 255.0
-        # penalise both too dark (<0.3) and overexposed (>0.85)
         if mean_lum < 0.3:
-            return mean_lum / 0.3            # scale 0→1 over dark range
+            return mean_lum / 0.3
         if mean_lum > 0.85:
             return 1.0 - (mean_lum - 0.85) / 0.15
         return 1.0
 
-    # ── Utility: estimate vehicle speed proxy from frame delta ────────────────
 
     @staticmethod
     def motion_magnitude(prev: np.ndarray, curr: np.ndarray) -> float:

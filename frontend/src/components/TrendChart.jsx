@@ -4,7 +4,6 @@ import Panel from './Panel.jsx'
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const W = 700, H = 200, PAD_TOP = 20
 
-// Map a 7-length series to SVG points across the viewBox.
 function toPoints(series, max) {
   const n = series.length
   return series.map((v, i) => {

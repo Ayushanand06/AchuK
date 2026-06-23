@@ -18,7 +18,6 @@ export default function DecisionDonut({ weekly }) {
       ]
     : []
 
-  // Build stroke-dasharray arcs over pathLength=100.
   let offset = 0
   const arcs = segments.map((s) => {
     const pct = total ? (s.value / total) * 100 : 0

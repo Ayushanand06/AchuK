@@ -1,8 +1,3 @@
-# map.py — Mappls (MapMyIndia) map data + proxied geo lookups.
-#
-# /api/map-data builds pins/heatmap/routes locally from challan records + the
-# camera registry. Routes/nearby/geocode only call Mappls when credentials are
-# configured; otherwise they degrade gracefully (handled inside map_integration).
 
 import logging
 from dataclasses import asdict

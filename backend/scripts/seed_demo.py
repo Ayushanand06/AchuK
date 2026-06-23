@@ -1,12 +1,3 @@
-# seed_demo.py — generate a realistic 28-day Bangalore challan history so every
-# dashboard (analytics, buckets, zone-hour, patrol, map) is populated for a demo.
-#
-#   uv run python scripts/seed_demo.py          # clears existing + seeds
-#   uv run python scripts/seed_demo.py --keep   # seed on top of existing data
-#
-# Bulk historical records are written directly (so they can be backdated). A
-# small set of recent "review" cases also get placeholder evidence + plate-crop
-# images + CVCS factors so the Review Console renders fully.
 
 import sys
 import json
@@ -94,13 +85,12 @@ def main():
     cams = list(camera_registry.all_cameras().values())
     if not cams:
         print("No cameras in registry."); return
-    # Spread each camera's peak hour around the clock for diverse patrol forecasts.
     peak_hours = [8, 11, 14, 18, 20, 22]
     peaks = {c["camera_id"]: peak_hours[i % len(peak_hours)] for i, c in enumerate(cams)}
 
     now = datetime.utcnow()
     total = 0
-    review_recent = []  # collect candidates for the imaged live queue
+    review_recent = []
 
     for day in range(28):
         date = (now - timedelta(days=day)).date()
@@ -114,7 +104,6 @@ def main():
                 ts = datetime(date.year, date.month, date.day, hour,
                               random.randint(0, 59), random.randint(0, 59),
                               random.randint(0, 999) * 1000)
-                # CVCS: high-stakes lean to review; otherwise mostly auto.
                 if vtype in HIGH_STAKES:
                     review = random.random() < 0.55
                 else:
@@ -140,8 +129,6 @@ def main():
                     "metadata": {"source": "seed"},
                 }
                 date_str = ts.strftime("%Y-%m-%d")
-                # Historical review cases are pre-actioned (kept out of the live queue);
-                # recent ones (last 2 days) become the imaged review queue.
                 if decision == "review" and day <= 1 and len(review_recent) < 14:
                     rec["metadata"].update({
                         "explanation": _explain(vtype),

@@ -1,10 +1,3 @@
-# photo_pipeline.py — single-image violation pipeline.
-#
-# Image-only orchestrator (the legacy pipeline.py is video/rule-engine heavy and
-# is not used here). Flow:
-#   preprocess -> MultiModelDetector -> PlateOCR -> CVCSEngine -> ChallanGenerator
-#
-# Reuses the existing domain classes unchanged; only the wiring is new.
 
 import time
 import logging
@@ -27,7 +20,7 @@ log = logging.getLogger("photo_pipeline")
 @dataclass
 class PhotoResult:
     """Everything produced for one processed image."""
-    violations:    List[dict]            # type, confidence, bbox, plate, cvcs, decision
+    violations:    List[dict]
     challans:      List[ChallanRecord]
     annotated:     np.ndarray
     processing_ms: float
@@ -67,7 +60,7 @@ class PhotoPipeline:
                 frame_width=w,
                 frame_height=h,
                 lighting_score=lighting,
-                motion_magnitude=0.0,            # single image: no motion
+                motion_magnitude=0.0,
                 camera_fp_rate=meta["historical_fp"],
                 violation_type=viol.violation_type,
             )
@@ -121,7 +114,6 @@ class PhotoPipeline:
             camera_id=meta["camera_id"],
         )
 
-    # ── Plate matching (ported from legacy pipeline._find_best_plate) ───────────
 
     def _find_best_plate(
         self,
@@ -161,7 +153,6 @@ class PhotoPipeline:
             pool = valid if valid else results
             return max(pool, key=lambda r: r.ocr_conf)
 
-        # OCR unreadable — still capture a plate snapshot for human review.
         crop = self.ocr.crop_plate(frame, best_box) if best_box else None
         if crop is None:
             return None
@@ -169,7 +160,6 @@ class PhotoPipeline:
                            ocr_conf=0.0, bbox=best_box, crop=crop)
 
 
-# Module-level singleton (detector/ocr are themselves cached).
 _PIPELINE: Optional[PhotoPipeline] = None
 
 

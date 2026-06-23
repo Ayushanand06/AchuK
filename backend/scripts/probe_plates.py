@@ -1,5 +1,3 @@
-# Diagnostic: run the plate model + OCR over sampled frames of a clip.
-# Usage: uv run python scripts/probe_plates.py <path> [sample_every]
 
 import sys
 import cv2
@@ -16,10 +14,10 @@ def main():
     if not cap.isOpened():
         print("Cannot open:", path); return
 
-    plate_boxes = 0          # raw plate detections from the plate YOLO
-    box_sizes = []           # (w,h) of detected plate boxes
+    plate_boxes = 0
+    box_sizes = []
     read_attempts = 0
-    reads = []               # (text, conf, valid)
+    reads = []
     processed = 0
     fi = 0
 

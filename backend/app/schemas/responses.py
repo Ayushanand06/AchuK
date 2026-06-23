@@ -1,4 +1,3 @@
-# responses.py — Pydantic response models for the API.
 
 from typing import List, Optional, Any
 from pydantic import BaseModel
@@ -46,7 +45,7 @@ class ChallanOut(BaseModel):
 
 
 class ReviewIn(BaseModel):
-    action: str                              # issue | reject | escalate
+    action: str
     corrected_plate: Optional[str] = None
     officer_id: Optional[str] = None
 
@@ -71,10 +70,10 @@ class VideoJobAccepted(BaseModel):
 
 class Calibration(BaseModel):
     stop_line_y: Optional[int] = None
-    signal_roi: Optional[List[int]] = None          # [x1, y1, x2, y2]
+    signal_roi: Optional[List[int]] = None
     lane_boundary_x: Optional[int] = None
     expected_left_dx: float = 1.0
-    no_parking_zones: List[List[List[int]]] = []     # [[[x,y], ...], ...]
+    no_parking_zones: List[List[List[int]]] = []
     fps: Optional[float] = None
 
 

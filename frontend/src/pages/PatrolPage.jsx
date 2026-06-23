@@ -21,7 +21,6 @@ export default function PatrolPage({ page, onNavigate, theme, onToggleTheme }) {
   const [mapReady, setMapReady] = useState(false)
   const [mapError, setMapError] = useState(null)
 
-  // Load data + init map once.
   useEffect(() => {
     let cancelled = false
     api.patrol().then((r) => !cancelled && setRecs(r || [])).catch(() => {})
@@ -50,11 +49,10 @@ export default function PatrolPage({ page, onNavigate, theme, onToggleTheme }) {
 
   const visible = recs.filter((r) => filter === 'all' || r.priority === filter)
 
-  // Place markers whenever filter / data / map readiness changes.
   useEffect(() => {
     if (!mapReady || !mapObj.current) return
     const { mappls, map } = mapObj.current
-    markers.current.forEach((m) => { try { m.remove() } catch (_) { /* noop */ } })
+    markers.current.forEach((m) => { try { m.remove() } catch (_) {} })
     markers.current = []
     visible.forEach((r) => {
       const cam = lookup[r.zone]
@@ -67,7 +65,7 @@ export default function PatrolPage({ page, onNavigate, theme, onToggleTheme }) {
           html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #0B0E12;box-shadow:0 0 0 1px ${color}"></div>`,
         })
         markers.current.push(mk)
-      } catch (_) { /* SDK marker variant — ignore */ }
+      } catch (_) {}
     })
   }, [mapReady, filter, recs, lookup]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -76,7 +74,6 @@ export default function PatrolPage({ page, onNavigate, theme, onToggleTheme }) {
       <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* MAP */}
         <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 16, padding: '16px 22px', borderBottom: `1px solid ${C.border}` }}>
             <div>
@@ -103,7 +100,6 @@ export default function PatrolPage({ page, onNavigate, theme, onToggleTheme }) {
           </div>
         </section>
 
-        {/* RECOMMENDATIONS */}
         <aside style={{ width: 424, flex: 'none', borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ flex: 'none', padding: '18px 18px 14px', borderBottom: `1px solid ${C.border}` }}>
             <h2 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 500 }}>Recommended deployment</h2>

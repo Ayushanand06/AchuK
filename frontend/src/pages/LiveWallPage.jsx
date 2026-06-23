@@ -6,7 +6,7 @@ import Header from '../components/Header.jsx'
 export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme }) {
   const [status, setStatus] = useState({ running: false, cameras: [], focus: null })
   const [busy, setBusy] = useState(false)
-  const [runToken, setRunToken] = useState(0)   // bumps on start → reconnect streams
+  const [runToken, setRunToken] = useState(0)
   const pollRef = useRef(null)
 
   const refresh = () => api.liveStatus().then(setStatus).catch(() => {})
@@ -31,8 +31,8 @@ export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme })
   }
 
   const focusCam = async (id) => {
-    setStatus((s) => ({ ...s, focus: id }))   // optimistic
-    try { await api.liveFocus(id) } catch { /* ignore */ }
+    setStatus((s) => ({ ...s, focus: id }))
+    try { await api.liveFocus(id) } catch {}
   }
 
   const cams = status.cameras || []

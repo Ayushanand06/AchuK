@@ -1,5 +1,3 @@
-# Diagnostic: run all models over a sampled set of frames from a clip and report
-# what they actually detect. Usage: uv run python scripts/probe_video.py <path>
 
 import sys
 from collections import defaultdict

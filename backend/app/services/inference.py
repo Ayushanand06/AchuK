@@ -1,7 +1,3 @@
-# inference.py — lazy singletons for the heavy ML objects.
-#
-# Models are large (helmet.pt alone is ~200 MB) so we load each weight file
-# exactly once, on first use, and reuse the instance across all requests.
 
 import logging
 from functools import lru_cache
@@ -23,11 +19,11 @@ def _load_yolo(weights_path: str):
     model = YOLO(weights_path)
     model.overrides["conf"] = YOLO_CONF_THRESHOLD
     model.overrides["iou"] = YOLO_IOU_THRESHOLD
-    model.overrides["imgsz"] = settings.inference_imgsz   # smaller = faster; coords map back
+    model.overrides["imgsz"] = settings.inference_imgsz
     try:
         import torch
         if torch.cuda.is_available():
-            model.overrides["half"] = True                # FP16 on GPU (~2x, fits 4GB)
+            model.overrides["half"] = True
     except Exception:
         pass
     log.info("Loaded %s — classes: %s", weights_path, model.names)

@@ -1,4 +1,3 @@
-# jobs.py — query background video-processing jobs.
 
 from fastapi import APIRouter, HTTPException
 

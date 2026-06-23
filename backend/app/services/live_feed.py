@@ -1,10 +1,3 @@
-# live_feed.py — continuous multi-camera "live feed" simulation.
-#
-# A single background thread drives the cameras: each visit decodes one frame,
-# runs a detection step, keeps the latest annotated JPEG in memory (for MJPEG
-# streaming) and tracks live stats. A "focus" camera is processed every loop
-# iteration (full rate) while the rest round-robin — so on a modest GPU one feed
-# can run smoothly while the others still update.
 
 import os
 import json
@@ -29,17 +22,16 @@ class LiveFeedManager:
         self._lock = threading.Lock()
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._feeds: Dict[str, str] = {}              # camera_id -> video path
+        self._feeds: Dict[str, str] = {}
         self._caps: Dict[str, cv2.VideoCapture] = {}
         self._pipes: Dict[str, VideoPipeline] = {}
         self._stats: Dict[str, dict] = {}
-        self._latest: Dict[str, bytes] = {}           # camera_id -> latest JPEG bytes
+        self._latest: Dict[str, bytes] = {}
         self._focus: Optional[str] = None
         self._rr = 0
         self._tick = settings.live_tick
         self._stride = settings.live_stride
 
-    # ── Feed mapping ─────────────────────────────────────────────────────────────
 
     def _resolve_feeds(self) -> Dict[str, str]:
         cfg = Path(settings.cameras_dir) / "feeds.json"
@@ -61,7 +53,6 @@ class LiveFeedManager:
         path = Path(p)
         return str(path if path.is_absolute() else Path(settings.feeds_dir).parent / p)
 
-    # ── Lifecycle ────────────────────────────────────────────────────────────────
 
     def start(self) -> dict:
         with self._lock:
@@ -87,7 +78,7 @@ class LiveFeedManager:
                 }
 
             if not self._focus and self._caps:
-                self._focus = next(iter(self._caps))   # default focus = first camera
+                self._focus = next(iter(self._caps))
             self._running = True
             self._thread = threading.Thread(target=self._loop, daemon=True)
             self._thread.start()
@@ -117,19 +108,17 @@ class LiveFeedManager:
             self._focus = None
         return self.status()
 
-    # ── Worker ───────────────────────────────────────────────────────────────────
 
     def _process(self, cam: str):
         cap = self._caps.get(cam)
         if cap is None:
             return
         ok, raw = cap.read()
-        if not ok:                                # clip ended → loop it
+        if not ok:
             cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ok, raw = cap.read()
             if not ok:
                 return
-        # Stride only the non-focus cameras (focus stays frame-accurate/smooth).
         if cam != self._focus:
             for _ in range(self._stride):
                 if not cap.grab():
@@ -158,7 +147,7 @@ class LiveFeedManager:
                 break
             schedule: List[str] = []
             if self._focus in self._caps:
-                schedule.append(self._focus)          # focus every iteration = full rate
+                schedule.append(self._focus)
             others = [c for c in cams if c != self._focus]
             if others:
                 schedule.append(others[self._rr % len(others)])
@@ -169,7 +158,6 @@ class LiveFeedManager:
                 self._process(cam)
             time.sleep(self._tick)
 
-    # ── Read side ────────────────────────────────────────────────────────────────
 
     def status(self) -> dict:
         return {"running": self._running, "focus": self._focus,

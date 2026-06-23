@@ -1,5 +1,3 @@
-# challan.py — Evidence packet generation with tamper-evident hashing
-# Produces legally defensible challan records
 
 import cv2
 import json
@@ -60,7 +58,6 @@ class ChallanGenerator:
     def __init__(self):
         os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ── Public API ─────────────────────────────────────────────────────────────
 
     def create(
         self,
@@ -129,7 +126,6 @@ class ChallanGenerator:
         with open(path) as f:
             return ChallanRecord(**json.load(f))
 
-    # ── Watermark ──────────────────────────────────────────────────────────────
 
     @staticmethod
     def _annotate_watermark(img: np.ndarray, challan_id: str) -> np.ndarray:
@@ -145,7 +141,6 @@ class ChallanGenerator:
         cv2.putText(out, ts, (w - 230, 18), font, 0.40, (200, 200, 200), 1)
         return out
 
-    # ── Hashing ────────────────────────────────────────────────────────────────
 
     @staticmethod
     def _hash_record(record: ChallanRecord) -> str:
@@ -154,7 +149,6 @@ class ChallanGenerator:
         canonical = json.dumps(d, sort_keys=True, ensure_ascii=True)
         return hashlib.sha256(canonical.encode()).hexdigest()
 
-    # ── Storage ────────────────────────────────────────────────────────────────
 
     @staticmethod
     def _save_image(img: np.ndarray, path: str):

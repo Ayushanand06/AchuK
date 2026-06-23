@@ -1,4 +1,3 @@
-# main.py — FastAPI application entry point.
 
 import logging
 from pathlib import Path
@@ -30,9 +29,7 @@ async def lifespan(app: FastAPI):
     log.info("Output dir: %s", OUTPUT_DIR)
     log.info("Models dir: %s", settings.models_dir)
     log.info("Mappls configured: %s", settings.mappls_configured)
-    # Models load lazily on first request (helmet.pt is ~200 MB).
     yield
-    # Stop any running live feeds on shutdown.
     from app.services.live_feed import manager as live_manager
     live_manager.stop()
 
@@ -56,7 +53,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve generated media as static files.
 for _d in (OUTPUT_DIR, settings.videos_dir, settings.frames_dir):
     Path(_d).mkdir(parents=True, exist_ok=True)
 app.mount("/evidence", StaticFiles(directory=OUTPUT_DIR), name="evidence")

@@ -1,8 +1,3 @@
-# camera_registry.py — maps camera_id -> physical location metadata.
-#
-# Every violation photo is tagged with a camera_id; the registry turns that into
-# GPS coordinates + zone so the map and analytics layers can place the event.
-# Registry entries are JSON files in settings.cameras_dir (one camera per file).
 
 import json
 import logging
@@ -27,7 +22,6 @@ def _load_registry() -> Dict[str, dict]:
         except Exception as exc:
             log.warning("Skipping bad camera file %s: %s", path, exc)
             continue
-        # Allow either a single camera object or a list of them.
         entries = data if isinstance(data, list) else [data]
         for entry in entries:
             cam_id = entry.get("camera_id")
@@ -36,7 +30,6 @@ def _load_registry() -> Dict[str, dict]:
     return registry
 
 
-# Loaded once at import; small and static.
 _REGISTRY: Dict[str, dict] = _load_registry()
 
 
@@ -73,19 +66,14 @@ def camera_meta(camera_id: Optional[str]) -> dict:
     }
 
 
-# ── Per-camera rule-engine calibration ─────────────────────────────────────────
-#
-# Stored separately from the seeded camera list so we never rewrite cameras.json.
-# Every field defaults to "inactive": a None / empty value means the matching
-# rule detector simply does nothing (the detectors already guard on None).
 
 CALIBRATION_DEFAULTS = {
-    "stop_line_y":      None,    # int pixel y of the stop line
-    "signal_roi":       None,    # [x1, y1, x2, y2] of the traffic-light box
-    "lane_boundary_x":  None,    # int pixel x dividing the two carriageways
-    "expected_left_dx": 1.0,     # +1 = left lane flows left->right
-    "no_parking_zones": [],      # list of polygons: [[[x,y], ...], ...]
-    "fps":              None,    # overrides detected video fps if set
+    "stop_line_y":      None,
+    "signal_roi":       None,
+    "lane_boundary_x":  None,
+    "expected_left_dx": 1.0,
+    "no_parking_zones": [],
+    "fps":              None,
 }
 
 

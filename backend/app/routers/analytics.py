@@ -1,4 +1,3 @@
-# analytics.py — weekly summary, enforcement KPIs, patrol recommendations.
 
 from datetime import datetime, timedelta
 from dataclasses import asdict
@@ -61,7 +60,7 @@ def camera_report():
         cam = rec.get("camera_id", "UNKNOWN")
         events[cam] = events.get(cam, 0) + 1
 
-    fp_rates = _engine.camera_false_positive_rates()   # {cam_id: 0-1}
+    fp_rates = _engine.camera_false_positive_rates()
     cameras = camera_registry.all_cameras()
 
     rows = []

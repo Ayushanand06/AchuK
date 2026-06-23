@@ -1,9 +1,3 @@
-# video_pipeline.py — frame-by-frame pipeline for time-dependent violations.
-#
-# Drives the existing rule engines (red-light, stop-line, wrong-side, illegal
-# parking) plus the 4-model visual detector over a video clip, deduplicates
-# repeated detections of the same ongoing violation, issues challans, and writes
-# an annotated output video.
 
 import logging
 from typing import Callable, List, Optional, Tuple
@@ -26,7 +20,6 @@ from app.services import camera_registry
 log = logging.getLogger("video_pipeline")
 
 
-# ── Duplicate suppression ───────────────────────────────────────────────────────
 
 class ViolationThrottle:
     """
@@ -56,7 +49,6 @@ class ViolationThrottle:
         return True
 
 
-# ── Pipeline ────────────────────────────────────────────────────────────────────
 
 class VideoPipeline:
     """Process one video for a given (calibrated) camera."""
@@ -67,16 +59,14 @@ class VideoPipeline:
         self.meta = camera_registry.camera_meta(camera_id)
         self.calib = camera_registry.get_calibration(camera_id)
         self.progress_cb = progress_cb
-        self.light = light          # live feeds use the fast preprocess path
+        self.light = light
 
-        # Shared heavy objects (cached singletons).
         self.preprocessor = ImagePreprocessor()
         self.detector = get_detector()
         self.ocr = get_ocr()
         self.cvcs = CVCSEngine()
         self.challan_gen = ChallanGenerator()
 
-        # Rule engines configured from calibration (None ⇒ inactive).
         c = self.calib
         self.stop_line = StopLineDetector(stop_line_y=c["stop_line_y"])
         self.red_light = RedLightDetector()
@@ -95,17 +85,13 @@ class VideoPipeline:
 
         self.throttle = ViolationThrottle(DEDUP_COOLDOWN_SEC)
 
-        # Streaming state (used by step() for live feeds + the file loop).
         self._prev_frame = None
         self._prev_bboxes: List[Tuple] = []
 
-        # Whether any rule engine is active — if not, we skip the COCO vehicle
-        # model entirely (a big CPU win on uncalibrated cameras).
         ar = self.active_rules()
         self._rules_on = any(ar[k] for k in
                              ("stop_line", "red_light", "wrong_side", "illegal_parking"))
 
-    # ── Which rules are active (surfaced in the job result) ──────────────────────
 
     def active_rules(self) -> dict:
         c = self.calib
@@ -114,10 +100,9 @@ class VideoPipeline:
             "red_light":       bool(c["signal_roi"]) and c["stop_line_y"] is not None,
             "wrong_side":      c["lane_boundary_x"] is not None,
             "illegal_parking": bool(c["no_parking_zones"]),
-            "helmet_seatbelt_triple": True,  # always on
+            "helmet_seatbelt_triple": True,
         }
 
-    # ── Single-frame step (shared by the file loop and live feeds) ───────────────
 
     def step(self, raw_frame, clock: float):
         """
@@ -132,7 +117,6 @@ class VideoPipeline:
                   if self._prev_frame is not None else 0.0)
         h, w = frame.shape[:2]
 
-        # Vehicle detection + rule engines only run when the camera is calibrated.
         if self._rules_on:
             vehicle_bboxes = detect_vehicle_bboxes(frame)
             signal_state, rl = self.red_light.check(frame, vehicle_bboxes, self._prev_bboxes)
@@ -187,7 +171,6 @@ class VideoPipeline:
         self._prev_bboxes = vehicle_bboxes
         return annotated, issued, {"signal_state": signal_state, "detections": len(merged)}
 
-    # ── File loop (used by the background-job upload path) ────────────────────────
 
     def process(
         self,
@@ -253,7 +236,6 @@ class VideoPipeline:
             "active_rules": self.active_rules(),
         }
 
-    # ── Helpers (ported from the legacy pipeline) ────────────────────────────────
 
     @staticmethod
     def _merge(visual, rule_violations) -> List[dict]:
@@ -320,7 +302,6 @@ class VideoPipeline:
             pool = valid if valid else results
             return max(pool, key=lambda r: r.ocr_conf)
 
-        # OCR unreadable — still capture a plate snapshot for human review.
         crop = self.ocr.crop_plate(frame, best_box) if best_box else None
         if crop is None:
             return None

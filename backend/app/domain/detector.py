@@ -1,10 +1,3 @@
-# detector.py — Multi-model YOLOv8 violation detector
-#
-# This project ships FOUR separate single-purpose models (helmet, seatbelt,
-# triple-riding, plate) instead of one unified multi-class model. This detector
-# runs the three *violation* models, resolves each model's own class labels
-# against config.MODEL_VIOLATION_MAP, and emits canonical ViolationEvents.
-# The plate model is owned by ocr.PlateOCR, not here.
 
 import logging
 import cv2
@@ -23,7 +16,6 @@ from app.services.inference import (
 log = logging.getLogger("detector")
 
 
-# ── Data structures (unchanged contract for downstream cvcs/challan) ────────────
 
 @dataclass
 class Detection:
@@ -31,7 +23,7 @@ class Detection:
     class_id:     int
     label:        str
     confidence:   float
-    bbox:         Tuple[int, int, int, int]   # x1, y1, x2, y2
+    bbox:         Tuple[int, int, int, int]
     is_violation: bool = False
 
 
@@ -46,7 +38,6 @@ class ViolationEvent:
     related:        List[Detection] = field(default_factory=list)
 
 
-# ── Multi-model detector ────────────────────────────────────────────────────────
 
 class MultiModelDetector:
     """
@@ -63,7 +54,6 @@ class MultiModelDetector:
         self.seatbelt = get_seatbelt_model()
         self.triple   = get_triple_model()
 
-        # Pre-resolve each model's class-id -> canonical violation label.
         self._helmet_map   = self._resolve_violation_labels(self.helmet,   "helmet")
         self._seatbelt_map = self._resolve_violation_labels(self.seatbelt, "seatbelt")
         self._triple_map   = self._resolve_violation_labels(self.triple,   "triple")
@@ -72,7 +62,6 @@ class MultiModelDetector:
         log.info("Seatbelt violation classes: %s", self._seatbelt_map)
         log.info("Triple violation classes:   %s", self._triple_map)
 
-    # ── Public API ─────────────────────────────────────────────────────────────
 
     def detect(
         self,
@@ -89,7 +78,6 @@ class MultiModelDetector:
         annotated = self._draw(frame.copy(), violations)
         return violations, annotated
 
-    # ── Per-model detection ────────────────────────────────────────────────────
 
     def _detect_simple(self, model, label_map: dict, frame: np.ndarray) -> List[ViolationEvent]:
         """
@@ -126,7 +114,6 @@ class MultiModelDetector:
         results = self.triple(frame, verbose=False)[0]
         names = self.triple.names
 
-        # Strategy (a): direct triple class
         if self._triple_map:
             events = []
             for box in results.boxes:
@@ -147,7 +134,6 @@ class MultiModelDetector:
             if events:
                 return events
 
-        # Strategy (b): count persons per motorcycle
         motos, persons = [], []
         for box in results.boxes:
             name = str(names.get(int(box.cls[0]), "")).lower()
@@ -176,7 +162,6 @@ class MultiModelDetector:
                 ))
         return events
 
-    # ── Label resolution ───────────────────────────────────────────────────────
 
     @staticmethod
     def _resolve_violation_labels(model, model_key: str) -> dict:
@@ -194,7 +179,6 @@ class MultiModelDetector:
                     break
         return resolved
 
-    # ── Annotation ─────────────────────────────────────────────────────────────
 
     @staticmethod
     def _draw(frame: np.ndarray, violations: List[ViolationEvent]) -> np.ndarray:
@@ -208,7 +192,6 @@ class MultiModelDetector:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         return frame
 
-    # ── Geometry ───────────────────────────────────────────────────────────────
 
     @staticmethod
     def _iou(a, b) -> float:

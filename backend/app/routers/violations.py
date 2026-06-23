@@ -1,4 +1,3 @@
-# violations.py — image / video upload -> detection -> challan.
 
 import logging
 import uuid
@@ -35,11 +34,10 @@ async def detect(
 
     try:
         result = get_pipeline().process(frame, camera_id=camera_id)
-    except Exception as exc:  # surface model/inference errors cleanly
+    except Exception as exc:
         log.exception("Detection failed")
         raise HTTPException(status_code=500, detail=f"Detection failed: {exc}")
 
-    # Evidence URL from the first issued challan (all share one annotated frame).
     evidence_url = None
     if result.challans:
         evidence_url = store.evidence_url(

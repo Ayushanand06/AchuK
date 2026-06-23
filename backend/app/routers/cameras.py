@@ -1,5 +1,3 @@
-# cameras.py — calibration helper: grab a frame to read pixel coords, and
-# read / save per-camera rule-engine calibration.
 
 import logging
 import tempfile
@@ -29,7 +27,6 @@ async def frame_grab(camera_id: str, file: UploadFile = File(...)):
         cap = cv2.VideoCapture(str(tmp))
         if not cap.isOpened():
             raise HTTPException(status_code=400, detail="Could not open video.")
-        # Grab a frame ~1s in (or the first available).
         fps = cap.get(cv2.CAP_PROP_FPS) or 25
         cap.set(cv2.CAP_PROP_POS_FRAMES, int(fps))
         ok, frame = cap.read()

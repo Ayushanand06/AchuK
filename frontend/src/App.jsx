@@ -22,8 +22,8 @@ export default function App() {
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)          // mutate live palette + persist + set data-theme
-    setThemeState(next)     // re-render the whole tree with the new palette
+    setTheme(next)
+    setThemeState(next)
   }
 
   const Page = PAGES[page] || OperationsDashboardPage

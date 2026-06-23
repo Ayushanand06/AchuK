@@ -1,11 +1,3 @@
-# rule_engine.py — Logic-based violation detection
-#
-# Handles violations that don't need trained vision models:
-#   1. Stop-line violation  — vehicle centroid crosses calibrated line
-#   2. Red-light violation  — signal state detection + vehicle in motion
-#   3. Wrong-side driving   — vehicle direction vector vs lane boundary
-#   4. Illegal parking      — stationary vehicle in no-parking zone over time
-#
 
 
 import cv2
@@ -16,22 +8,16 @@ from typing import List, Tuple, Dict, Optional
 from collections import deque, defaultdict
 
 
-# ── Data structures ────────────────────────────────────────────────────────────
 
 @dataclass
 class RuleViolation:
     """Violation detected by a rule (not a trained model)."""
     violation_type: str
-    confidence:     float          # rule-based confidence (0–1)
+    confidence:     float
     bbox:           Tuple[int, int, int, int]
-    evidence:       dict = field(default_factory=dict)  # supporting data
+    evidence:       dict = field(default_factory=dict)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  1. STOP-LINE VIOLATION DETECTOR
-#  Logic: vehicle centroid crosses a calibrated horizontal line
-#         while the signal state is red or unknown.
-# ══════════════════════════════════════════════════════════════════════════════
 
 class StopLineDetector:
     """
@@ -54,8 +40,8 @@ class StopLineDetector:
 
     def __init__(self, stop_line_y: Optional[int] = None):
         self.stop_line_y  = stop_line_y
-        self.margin_px    = 10     # pixels of tolerance before flagging
-        self.violation_zone_depth = 80   # pixels — how deep past line counts
+        self.margin_px    = 10
+        self.violation_zone_depth = 80
 
     def calibrate(self, frame: np.ndarray) -> int:
         """
@@ -87,7 +73,7 @@ class StopLineDetector:
     def check(
         self,
         vehicle_bboxes: List[Tuple[int, int, int, int]],
-        signal_state:   str = "red",       # "red" | "green" | "unknown"
+        signal_state:   str = "red",
     ) -> List[RuleViolation]:
         """
         Check all vehicle bounding boxes against the stop line.
@@ -102,17 +88,15 @@ class StopLineDetector:
         if self.stop_line_y is None:
             return []
 
-        # Stop-line violations only matter when signal is red or unknown
         if signal_state == "green":
             return []
 
         violations = []
         for bbox in vehicle_bboxes:
             x1, y1, x2, y2 = bbox
-            vehicle_bottom = y2           # bottom edge of vehicle bbox
+            vehicle_bottom = y2
 
             if vehicle_bottom > (self.stop_line_y + self.margin_px):
-                # How far past the line (scales confidence)
                 depth = vehicle_bottom - self.stop_line_y
                 conf  = min(0.95, 0.65 + (depth / self.violation_zone_depth) * 0.30)
 
@@ -141,10 +125,6 @@ class StopLineDetector:
         return frame
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  2. RED-LIGHT VIOLATION DETECTOR
-#  Logic: signal is RED + vehicle is moving past stop line
-# ══════════════════════════════════════════════════════════════════════════════
 
 class RedLightDetector:
     """
@@ -169,8 +149,6 @@ class RedLightDetector:
         - Red in HSV wraps around (0° and 360°), so two masks are needed.
     """
 
-    # HSV colour ranges for Indian traffic signals
-    # (tune these if your camera has different white balance)
     RED_LOWER_1  = np.array([0,   120, 70])
     RED_UPPER_1  = np.array([10,  255, 255])
     RED_LOWER_2  = np.array([170, 120, 70])
@@ -181,7 +159,7 @@ class RedLightDetector:
     AMBER_UPPER  = np.array([35,  255, 255])
 
     def __init__(self):
-        self.signal_roi    = None     # (x1, y1, x2, y2) of traffic light
+        self.signal_roi    = None
         self.stop_line_y   = None
         self._prev_frames: deque = deque(maxlen=5)
         self._state_history: deque = deque(maxlen=10)
@@ -219,7 +197,7 @@ class RedLightDetector:
             "amber": int(np.sum(amber_mask > 0)),
         }
         total = roi.shape[0] * roi.shape[1]
-        threshold = total * 0.08   # at least 8% of ROI must be the colour
+        threshold = total * 0.08
 
         state = "unknown"
         best  = max(counts.values())
@@ -227,7 +205,6 @@ class RedLightDetector:
             state = max(counts, key=counts.get)
 
         self._state_history.append(state)
-        # Return majority vote over last 10 frames
         from collections import Counter
         votes = Counter(self._state_history)
         return votes.most_common(1)[0][0]
@@ -236,7 +213,7 @@ class RedLightDetector:
         self,
         frame:          np.ndarray,
         vehicle_bboxes: List[Tuple[int, int, int, int]],
-        prev_bboxes:    List[Tuple[int, int, int, int]],  # from previous frame
+        prev_bboxes:    List[Tuple[int, int, int, int]],
     ) -> Tuple[str, List[RuleViolation]]:
         """
         Full red-light violation check.
@@ -258,11 +235,9 @@ class RedLightDetector:
             x1, y1, x2, y2 = bbox
             vehicle_bottom = y2
 
-            # Vehicle must be past the stop line
             if vehicle_bottom <= self.stop_line_y:
                 continue
 
-            # Vehicle must be moving (compare centroid to previous frame)
             cx = (x1 + x2) // 2
             cy = (y1 + y2) // 2
             is_moving = self._is_moving(cx, cy, prev_bboxes)
@@ -292,7 +267,7 @@ class RedLightDetector:
         from its closest match in the previous frame.
         """
         if not prev_bboxes:
-            return True  # no previous frame → assume moving
+            return True
         min_dist = float("inf")
         for pb in prev_bboxes:
             px = (pb[0] + pb[2]) // 2
@@ -302,10 +277,6 @@ class RedLightDetector:
         return min_dist > threshold
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  3. WRONG-SIDE DRIVING DETECTOR
-#  Logic: vehicle direction vector opposes expected lane direction
-# ══════════════════════════════════════════════════════════════════════════════
 
 class WrongSideDetector:
     """
@@ -331,9 +302,9 @@ class WrongSideDetector:
     def __init__(
         self,
         lane_boundary_x:    int    = None,
-        expected_left_dx:   float  = 1.0,    # +1 = left→right, -1 = right→left
-        track_window:       int    = 8,       # frames to track before deciding
-        min_motion_px:      float  = 5.0,     # ignore near-stationary vehicles
+        expected_left_dx:   float  = 1.0,
+        track_window:       int    = 8,
+        min_motion_px:      float  = 5.0,
         confidence_base:    float  = 0.80,
     ):
         self.lane_boundary_x  = lane_boundary_x
@@ -342,7 +313,6 @@ class WrongSideDetector:
         self.min_motion_px    = min_motion_px
         self.confidence_base  = confidence_base
 
-        # vehicle_id → deque of (cx, cy) centroids
         self._tracks: Dict[int, deque] = defaultdict(
             lambda: deque(maxlen=track_window)
         )
@@ -369,21 +339,18 @@ class WrongSideDetector:
 
         for vid, track in self._tracks.items():
             if len(track) < self.track_window // 2:
-                continue    # not enough history yet
+                continue
 
-            # Compute overall direction vector
             dx = track[-1][0] - track[0][0]
             dy = track[-1][1] - track[0][1]
             total_motion = (dx**2 + dy**2) ** 0.5
 
             if total_motion < self.min_motion_px:
-                continue    # vehicle is effectively stationary
+                continue
 
-            # Current centroid x position
             cx = track[-1][0]
             cy = track[-1][1]
 
-            # Determine expected dx sign for this lane half
             if cx < self.lane_boundary_x:
                 expected_sign = np.sign(self.expected_left_dx)
             else:
@@ -392,11 +359,9 @@ class WrongSideDetector:
             actual_sign = np.sign(dx)
 
             if actual_sign != expected_sign and abs(dx) > self.min_motion_px:
-                # Scale confidence by how strongly wrong-side the motion is
                 wrongness = min(1.0, abs(dx) / 30.0)
                 conf = self.confidence_base + wrongness * 0.10
 
-                # Reconstruct bbox from last known position (approximate)
                 bbox = self._id_to_bbox(vid, vehicle_bboxes)
                 if bbox:
                     violations.append(RuleViolation(
@@ -423,7 +388,7 @@ class WrongSideDetector:
 
         for i, (cx, cy) in enumerate(centroids):
             best_id   = None
-            best_dist = 50.0    # max px distance to match a track
+            best_dist = 50.0
 
             for vid, track in self._tracks.items():
                 if not track:
@@ -450,10 +415,6 @@ class WrongSideDetector:
         return bboxes[0] if bboxes else None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  4. ILLEGAL PARKING DETECTOR
-#  Logic: vehicle remains stationary in a restricted zone for > N seconds
-# ══════════════════════════════════════════════════════════════════════════════
 
 class IllegalParkingDetector:
     """
@@ -475,16 +436,15 @@ class IllegalParkingDetector:
 
     def __init__(
         self,
-        no_parking_zones:       List[np.ndarray] = None,  # list of polygons
+        no_parking_zones:       List[np.ndarray] = None,
         max_stationary_seconds: float = 30.0,
-        stationary_threshold:   float = 15.0,   # pixels of allowed movement
+        stationary_threshold:   float = 15.0,
         fps:                    float = 25.0,
     ):
         self.zones                  = no_parking_zones or []
         self.max_stationary_frames  = int(max_stationary_seconds * fps)
         self.stationary_threshold   = stationary_threshold
 
-        # vehicle_id → {"bbox": ..., "first_seen_frame": ..., "last_cx": ..., "last_cy": ...}
         self._parked_vehicles: Dict[int, dict] = {}
         self._frame_count = 0
         self._next_id     = 0
@@ -520,7 +480,6 @@ class IllegalParkingDetector:
             cx = (bbox[0] + bbox[2]) // 2
             cy = (bbox[1] + bbox[3]) // 2
 
-            # Match to existing tracked vehicle
             vid = self._match_vehicle(cx, cy)
 
             if vid in self._parked_vehicles:
@@ -528,12 +487,10 @@ class IllegalParkingDetector:
                 moved   = ((cx - entry["last_cx"])**2 +
                            (cy - entry["last_cy"])**2) ** 0.5
                 if moved > self.stationary_threshold:
-                    # Vehicle moved — reset timer
                     entry["first_seen_frame"] = self._frame_count
                     entry["last_cx"] = cx
                     entry["last_cy"] = cy
                 else:
-                    # Still stationary — check duration
                     frames_stationary = self._frame_count - entry["first_seen_frame"]
                     if (frames_stationary >= self.max_stationary_frames and
                             self._in_no_parking_zone(cx, cy)):

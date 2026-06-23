@@ -1,8 +1,3 @@
-// Color + type tokens for AchuK. Two palettes (dark default + light) share the
-// same semantic keys, so components can keep reading `C.<key>` unchanged. `C`
-// is a live object: setTheme() mutates it in place and the app re-renders, so
-// every inline style picks up the new palette.
-
 const DARK = {
   bg: '#0E1116',
   panel: '#171B22',
@@ -37,7 +32,6 @@ const LIGHT = {
 
 export const PALETTES = { dark: DARK, light: LIGHT }
 
-// Live palette — mutated in place by setTheme so existing `import { C }` works.
 export const C = { ...DARK }
 
 export const FONT = {
@@ -45,8 +39,6 @@ export const FONT = {
   mono: "'IBM Plex Mono', monospace",
 }
 
-// Status metadata stores a palette KEY (not a frozen color) so it stays correct
-// after a theme switch. Resolve with C[meta.colorKey].
 export const STATUS_META = {
   ok: { label: 'OK', colorKey: 'green' },
   watch: { label: 'Watch', colorKey: 'amber' },
@@ -65,17 +57,15 @@ export function initialTheme() {
 
 export function setTheme(name) {
   const palette = PALETTES[name] || DARK
-  Object.assign(C, palette)               // mutate live palette in place
+  Object.assign(C, palette)
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.theme = name
   }
   try {
     localStorage.setItem(STORAGE_KEY, name)
   } catch {
-    /* ignore */
   }
   return name
 }
 
-// Apply the stored/default theme immediately so the first render is correct.
 setTheme(initialTheme())

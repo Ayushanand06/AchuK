@@ -45,7 +45,7 @@ export default function ReviewConsolePage({ page, onNavigate, theme, onToggleThe
     if (!item) return
     try {
       await api.reviewAction(item.challan_id, { action, corrected_plate: plate, officer_id: 'web' })
-    } catch (_) { /* surface via lastAction below regardless */ }
+    } catch (_) {}
     const remaining = queue.filter((_, i) => i !== sel)
     setLastAction({ action, id: item.challan_id })
     setQueue(remaining)
@@ -76,7 +76,6 @@ export default function ReviewConsolePage({ page, onNavigate, theme, onToggleThe
       <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* LEFT: queue */}
         <aside style={{ width: 312, flex: 'none', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ flex: 'none', padding: '16px 16px 12px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>Review queue</h2>
@@ -112,7 +111,6 @@ export default function ReviewConsolePage({ page, onNavigate, theme, onToggleThe
           </div>
         </aside>
 
-        {/* CENTER: evidence */}
         <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
           {!current ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.faint, fontSize: 13 }}>
@@ -154,7 +152,6 @@ export default function ReviewConsolePage({ page, onNavigate, theme, onToggleThe
           )}
         </section>
 
-        {/* RIGHT: inspector */}
         <aside style={{ width: 408, flex: 'none', borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {current && (
             <>

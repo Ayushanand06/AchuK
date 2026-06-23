@@ -5,13 +5,13 @@ import { loadMappls, MAPPLS_KEY } from '../lib/mappls.js'
 import Header from '../components/Header.jsx'
 import Panel from '../components/Panel.jsx'
 
-const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 } // Bengaluru
+const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 }
 const DEFAULT_ZOOM = 11
 
 export default function MapPage({ page, onNavigate, theme, onToggleTheme }) {
   const mapEl = useRef(null)
   const mapObj = useRef(null)
-  const [status, setStatus] = useState('loading') // loading | ready | error | nokey
+  const [status, setStatus] = useState('loading')
   const [error, setError] = useState(null)
   const [payload, setPayload] = useState(null)
 
@@ -112,14 +112,12 @@ function SummaryCard({ summary, colors }) {
   )
 }
 
-// Builds the map: camera nodes (always), violation pins, heatmap circles.
 function renderMap(mappls, el, mapRef, data, cams) {
   const pins = data?.pins || []
   const heat = data?.heatmap || []
   const colors = data?.violation_colors || {}
   const camList = Object.values(cams || {})
 
-  // Center on the first pin / camera if available.
   const first = pins[0] || camList[0]
   const center = first ? { lat: first.lat, lng: first.lng } : DEFAULT_CENTER
 
@@ -127,21 +125,17 @@ function renderMap(mappls, el, mapRef, data, cams) {
   mapRef.current = map
 
   const place = () => {
-    // Camera nodes (neutral markers).
     camList.forEach((c) => safeMarker(mappls, map, c.lat, c.lng,
       `<b>${c.camera_id}</b><br/>${c.location || ''} · ${c.zone || ''}`, C.muted))
 
-    // Heatmap intensity circles per zone.
     heat.forEach((z) => safeCircle(mappls, map, z.lat, z.lng,
       300 + (z.intensity || 0) * 900))
 
-    // Violation pins, coloured by type.
     pins.forEach((p) => safeMarker(mappls, map, p.lat, p.lng,
       `<b>${p.violation_type}</b><br/>${p.plate_number || ''}<br/>${p.zone || ''} · CVCS ${p.cvcs_score ?? ''}`,
       colors[p.violation_type] || C.accent))
   }
 
-  // SDK fires 'load' when tiles are ready; place immediately too as a fallback.
   if (typeof map.on === 'function') map.on('load', place)
   place()
 }
@@ -153,7 +147,7 @@ function safeMarker(mappls, map, lat, lng, html, color) {
       icon_url: undefined, fitbounds: false,
       html: `<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #0E1116;box-shadow:0 0 0 1px ${color}"></div>`,
     })
-  } catch (_) { /* SDK variant without html marker — ignore */ }
+  } catch (_) {}
 }
 
 function safeCircle(mappls, map, lat, lng, radius) {
@@ -162,5 +156,5 @@ function safeCircle(mappls, map, lat, lng, radius) {
       map, center: { lat, lng }, radius,
       fillColor: '#4A90D9', fillOpacity: 0.18, strokeColor: '#4A90D9', strokeOpacity: 0.4, strokeWeight: 1,
     })
-  } catch (_) { /* Circle may be unavailable in some SDK builds — ignore */ }
+  } catch (_) {}
 }

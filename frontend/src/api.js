@@ -1,5 +1,3 @@
-// Thin fetch wrapper around the VisionEnforce backend.
-// Base is empty in dev (Vite proxy handles /api); override via VITE_API_BASE.
 const BASE = import.meta.env.VITE_API_BASE || ''
 
 async function getJSON(path) {
@@ -37,7 +35,6 @@ export const api = {
   reviewAction: (id, body) =>
     postJSON('/api/challans/' + encodeURIComponent(id) + '/review', body),
 
-  // Live feeds
   liveStatus: () => getJSON('/api/live/status'),
   liveStart: () => postJSON('/api/live/start', {}),
   liveStop: () => postJSON('/api/live/stop', {}),
@@ -47,11 +44,9 @@ export const api = {
   liveStreamUrl: (id, run) =>
     `${BASE}/api/live/cameras/${encodeURIComponent(id)}/stream.mjpg?s=${run}`,
 
-  // Search maps a tab key -> challan query param.
   searchChallans({ type, q }) {
     const param = { plate: 'plate', challan: 'challan', zone: 'zone', date: 'date' }[type] || 'plate'
     if (param === 'challan') {
-      // single-record lookup by id
       return getJSON('/api/challans/' + encodeURIComponent(q.trim()))
         .then((r) => ({ count: 1, results: [r] }))
         .catch(() => ({ count: 0, results: [] }))

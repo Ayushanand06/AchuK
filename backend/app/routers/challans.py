@@ -1,4 +1,3 @@
-# challans.py — searchable challan records + single-record lookup + review action.
 
 from fastapi import APIRouter, HTTPException, Query
 

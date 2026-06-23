@@ -1,4 +1,3 @@
-# health.py — liveness + model status endpoints.
 
 from fastapi import APIRouter
 

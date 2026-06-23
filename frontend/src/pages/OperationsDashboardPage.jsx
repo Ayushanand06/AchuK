@@ -41,7 +41,7 @@ export default function OperationsDashboardPage({ page, onNavigate, theme, onTog
       })
     }
     load()
-    const poll = setInterval(load, 5000)   // dashboards climb live as detections stream in
+    const poll = setInterval(load, 5000)
     return () => { alive = false; clearInterval(poll) }
   }, [])
 
@@ -67,7 +67,6 @@ export default function OperationsDashboardPage({ page, onNavigate, theme, onTog
           </div>
         </div>
 
-        {/* bucket cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
           <BucketCard color={C.green} title="Auto-issued" tag="CVCS ≥ 0.80"
             count={buckets?.auto?.count} sub="challans issued" avg={buckets?.auto?.avg_cvcs} />
@@ -77,7 +76,6 @@ export default function OperationsDashboardPage({ page, onNavigate, theme, onTog
             count={null} sub="below confidence floor" notTracked />
         </div>
 
-        {/* KPI strip */}
         <Panel style={{ padding: 0, display: 'grid', gridTemplateColumns: 'repeat(6,1fr)' }}>
           {[
             ['Auto-issue rate', pct(kpis?.auto_challan_rate), '%'],
@@ -97,13 +95,11 @@ export default function OperationsDashboardPage({ page, onNavigate, theme, onTog
           ))}
         </Panel>
 
-        {/* violations by type + top zones */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
           <ViolationsByType weekly={weekly} />
           <TopZones weekly={weekly} />
         </div>
 
-        {/* 24h distribution */}
         <HourDistribution weekly={weekly} />
       </main>
     </div>

@@ -1,5 +1,3 @@
-# cvcs.py — Contextual Violation Confidence Scoring (CVCS)
-# The innovation layer: goes beyond raw model confidence
 
 import numpy as np
 from dataclasses import dataclass
@@ -12,14 +10,14 @@ from app.config import (
 @dataclass
 class CVCSResult:
     """Full scoring breakdown for a single violation event."""
-    final_score:      float       # weighted composite (0–1)
-    decision:         str         # "auto_challan" | "review" | "discard"
+    final_score:      float
+    decision:         str
     model_conf:       float
     resolution_score: float
     lighting_score:   float
     speed_score:      float
     camera_score:     float
-    explanation:      str         # human-readable reason for decision
+    explanation:      str
 
 
 class CVCSEngine:
@@ -96,7 +94,6 @@ class CVCSEngine:
             explanation      = explanation,
         )
 
-    # ── Sub-scorers ───────────────────────────────────────────────────────────
 
     @staticmethod
     def _resolution_score(w: int, h: int) -> float:
@@ -129,7 +126,6 @@ class CVCSEngine:
         """
         return float(np.clip(1.0 - fp_rate * 2.0, 0.1, 1.0))
 
-    # ── Decision logic ────────────────────────────────────────────────────────
 
     @staticmethod
     def _decide(

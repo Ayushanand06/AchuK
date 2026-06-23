@@ -1,5 +1,3 @@
-# ocr.py — License plate detection + OCR
-# Pipeline: detect plate region → super-resolution → PaddleOCR → validate
 import cv2
 import re
 import torch
@@ -18,12 +16,12 @@ from app.config import (
 @dataclass
 class PlateResult:
     """Result of OCR on one license plate."""
-    raw_text:     str            # raw OCR output
-    cleaned_text: str            # after formatting clean-up
-    is_valid:     bool           # passed Indian plate regex
-    ocr_conf:     float          # mean character confidence (0–1)
-    bbox:         Tuple[int, int, int, int]   # plate location in frame
-    crop:         np.ndarray     # upscaled plate crop image
+    raw_text:     str
+    cleaned_text: str
+    is_valid:     bool
+    ocr_conf:     float
+    bbox:         Tuple[int, int, int, int]
+    crop:         np.ndarray
 
 
 class PlateOCR:
@@ -63,7 +61,6 @@ class PlateOCR:
             import easyocr
             return easyocr.Reader(["en"], gpu=torch.cuda.is_available())
 
-    # ── Detect plate regions in full frame ───────────────────────────────────
 
     def find_plates(self, frame: np.ndarray) -> list[Tuple[int,int,int,int]]:
         """
@@ -83,7 +80,6 @@ class PlateOCR:
                 plates.append((x1, y1, x2, y2))
         return plates
 
-    # ── Full extraction pipeline ──────────────────────────────────────────────
 
     def extract(
         self,
@@ -115,7 +111,6 @@ class PlateOCR:
             crop         = upscaled,
         )
 
-    # ── Crop-only (no OCR) ────────────────────────────────────────────────────
 
     def crop_plate(self, frame: np.ndarray, bbox) -> Optional[np.ndarray]:
         """
@@ -127,7 +122,6 @@ class PlateOCR:
             return None
         return self._super_resolve(crop)
 
-    # ── Stage helpers ─────────────────────────────────────────────────────────
 
     def _crop(self, frame: np.ndarray, bbox) -> Optional[np.ndarray]:
         x1, y1, x2, y2 = bbox
@@ -195,7 +189,6 @@ class PlateOCR:
         Handles both PaddleOCR and EasyOCR return formats.
         """
         try:
-            # PaddleOCR path
             result = self._reader.ocr(img, cls=True)
             if not result or not result[0]:
                 return "", 0.0
@@ -210,7 +203,6 @@ class PlateOCR:
             return " ".join(texts), mean_conf
 
         except Exception:
-            # EasyOCR fallback path
             result = self._reader.readtext(img)
             if not result:
                 return "", 0.0
@@ -230,14 +222,12 @@ class PlateOCR:
         t = text.upper().strip()
         t = re.sub(r"[^A-Z0-9]", "", t)
 
-        # Apply common character corrections in the numeric zone (last 4 chars)
         if len(t) >= 4:
             num_part = t[-4:]
             num_part = num_part.replace("O", "0").replace("I", "1") \
                                .replace("B", "8").replace("S", "5")
             t = t[:-4] + num_part
 
-        # Apply letter corrections in state/district zone (first 4 chars)
         if len(t) >= 4:
             alpha_part = t[:4]
             alpha_part = alpha_part.replace("0", "O").replace("1", "I")

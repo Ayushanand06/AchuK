@@ -1,7 +1,3 @@
-# jobs.py — in-memory background job tracker for video processing.
-#
-# Prototype-grade: jobs live in process memory and are lost on restart. Enough
-# for a single-instance demo; a DB/queue would be the production upgrade.
 
 import uuid
 import logging
@@ -24,8 +20,8 @@ def create_job(camera_id: Optional[str], filename: str) -> str:
     job_id = uuid.uuid4().hex[:12]
     JOBS[job_id] = {
         "job_id": job_id,
-        "status": "queued",          # queued | running | done | error
-        "progress": 0.0,             # 0.0 – 1.0
+        "status": "queued",
+        "progress": 0.0,
         "frames_done": 0,
         "frames_total": 0,
         "camera_id": camera_id,
@@ -84,7 +80,6 @@ def run_job(job_id: str, video_path: str, camera_id: Optional[str],
         log.exception("Job %s failed", job_id)
         _update(job_id, status="error", error=str(exc))
     finally:
-        # Best-effort cleanup of the uploaded source clip.
         try:
             Path(video_path).unlink(missing_ok=True)
         except Exception:

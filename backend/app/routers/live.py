@@ -1,4 +1,3 @@
-# live.py — control + read the live camera-feed simulation.
 
 import asyncio
 
