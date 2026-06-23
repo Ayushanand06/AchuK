@@ -41,8 +41,11 @@ export const api = {
   liveStatus: () => getJSON('/api/live/status'),
   liveStart: () => postJSON('/api/live/start', {}),
   liveStop: () => postJSON('/api/live/stop', {}),
+  liveFocus: (id) => postJSON('/api/live/focus/' + encodeURIComponent(id), {}),
   liveFrameUrl: (id, bust) =>
     `${BASE}/api/live/cameras/${encodeURIComponent(id)}/frame.jpg?t=${bust}`,
+  liveStreamUrl: (id, run) =>
+    `${BASE}/api/live/cameras/${encodeURIComponent(id)}/stream.mjpg?s=${run}`,
 
   // Search maps a tab key -> challan query param.
   searchChallans({ type, q }) {

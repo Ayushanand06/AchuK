@@ -4,16 +4,16 @@ import { api } from '../api.js'
 import Header from '../components/Header.jsx'
 
 export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme }) {
-  const [status, setStatus] = useState({ running: false, cameras: [] })
+  const [status, setStatus] = useState({ running: false, cameras: [], focus: null })
   const [busy, setBusy] = useState(false)
-  const [tick, setTick] = useState(0)            // drives frame cache-busting
+  const [runToken, setRunToken] = useState(0)   // bumps on start → reconnect streams
   const pollRef = useRef(null)
 
   const refresh = () => api.liveStatus().then(setStatus).catch(() => {})
 
   useEffect(() => {
     refresh()
-    pollRef.current = setInterval(() => { refresh(); setTick((t) => t + 1) }, 2000)
+    pollRef.current = setInterval(refresh, 2000)
     return () => clearInterval(pollRef.current)
   }, [])
 
@@ -21,12 +21,18 @@ export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme })
     setBusy(true)
     try {
       const s = status.running ? await api.liveStop() : await api.liveStart()
+      if (!status.running) setRunToken((t) => t + 1)
       setStatus(s)
     } catch (e) {
       alert('Live feed error: ' + (e.message || e))
     } finally {
       setBusy(false)
     }
+  }
+
+  const focusCam = async (id) => {
+    setStatus((s) => ({ ...s, focus: id }))   // optimistic
+    try { await api.liveFocus(id) } catch { /* ignore */ }
   }
 
   const cams = status.cameras || []
@@ -41,7 +47,7 @@ export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme })
             <h1 style={{ margin: 0, fontSize: 21, fontWeight: 500 }}>Live camera wall</h1>
             <p style={{ margin: '5px 0 0', fontSize: 13, color: C.muted }}>
               {cams.length} junction feeds · {status.running
-                ? `${totalViolations} violations detected this session`
+                ? `${totalViolations} violations this session · click a tile to run it at full rate`
                 : 'feeds stopped'}
             </p>
           </div>
@@ -69,7 +75,14 @@ export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme })
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {cams.map((cam) => (
-              <CameraTile key={cam.camera_id} cam={cam} running={status.running} tick={tick} />
+              <CameraTile
+                key={cam.camera_id}
+                cam={cam}
+                running={status.running}
+                focused={status.focus === cam.camera_id}
+                runToken={runToken}
+                onFocus={() => focusCam(cam.camera_id)}
+              />
             ))}
           </div>
         )}
@@ -78,28 +91,40 @@ export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme })
   )
 }
 
-function CameraTile({ cam, running, tick }) {
+function CameraTile({ cam, running, focused, runToken, onFocus }) {
   const fresh = cam.last_seen && (Date.now() - new Date(cam.last_seen).getTime()) < 8000
   const dot = running && fresh ? C.green : running ? C.amber : C.faint
   return (
-    <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+    <div
+      onClick={running ? onFocus : undefined}
+      title={running ? 'Run this camera at full rate' : ''}
+      style={{
+        background: C.panel,
+        border: `1px solid ${focused ? C.accent : C.border}`,
+        boxShadow: focused ? `0 0 0 1px ${C.accent}` : 'none',
+        borderRadius: 12, overflow: 'hidden', cursor: running ? 'pointer' : 'default',
+      }}
+    >
       <div style={{ position: 'relative', aspectRatio: '16 / 9', background: '#0B0E12' }}>
         {running ? (
           <img
-            src={api.liveFrameUrl(cam.camera_id, tick)}
+            src={api.liveStreamUrl(cam.camera_id, runToken)}
             alt={cam.camera_id}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
-            onLoad={(e) => { e.currentTarget.style.visibility = 'visible' }}
           />
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.faint, fontFamily: FONT.mono, fontSize: 12 }}>offline</div>
         )}
         <div style={{ position: 'absolute', left: 10, top: 10, display: 'flex', alignItems: 'center', gap: 6, background: '#0E1116AA', borderRadius: 6, padding: '3px 8px' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot }} />
-          <span style={{ fontFamily: FONT.mono, fontSize: 11 }}>{cam.camera_id}</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 11, color: '#E6E9EF' }}>{cam.camera_id}</span>
         </div>
-        <div style={{ position: 'absolute', right: 10, top: 10, fontFamily: FONT.mono, fontSize: 11, color: C.text, background: '#0E1116AA', borderRadius: 6, padding: '3px 8px' }}>
+        {focused && running && (
+          <div style={{ position: 'absolute', left: 10, bottom: 10, fontFamily: FONT.mono, fontSize: 10, color: '#0E1116', background: C.accent, borderRadius: 6, padding: '2px 7px', fontWeight: 600 }}>
+            FOCUS · full rate
+          </div>
+        )}
+        <div style={{ position: 'absolute', right: 10, top: 10, fontFamily: FONT.mono, fontSize: 11, color: '#E6E9EF', background: '#0E1116AA', borderRadius: 6, padding: '3px 8px' }}>
           {cam.violations} viol.
         </div>
       </div>

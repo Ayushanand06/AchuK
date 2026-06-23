@@ -1,11 +1,10 @@
 # live_feed.py — continuous multi-camera "live feed" simulation.
 #
-# Each registered camera is bound to a looping video clip. A single background
-# thread round-robins the cameras, runs one detection step per visit, writes the
-# camera's latest annotated frame to disk, and tracks live stats. This mimics N
-# live junction streams for the operations wall.
-#
-# CPU-realistic: it processes ~one frame at a time across cameras (not 25fps).
+# A single background thread drives the cameras: each visit decodes one frame,
+# runs a detection step, keeps the latest annotated JPEG in memory (for MJPEG
+# streaming) and tracks live stats. A "focus" camera is processed every loop
+# iteration (full rate) while the rest round-robin — so on a modest GPU one feed
+# can run smoothly while the others still update.
 
 import os
 import json
@@ -30,20 +29,19 @@ class LiveFeedManager:
         self._lock = threading.Lock()
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._feeds: Dict[str, str] = {}          # camera_id -> video path
+        self._feeds: Dict[str, str] = {}              # camera_id -> video path
         self._caps: Dict[str, cv2.VideoCapture] = {}
         self._pipes: Dict[str, VideoPipeline] = {}
         self._stats: Dict[str, dict] = {}
-        self._tick = 0.05                          # small breather between frames
-        self._stride = settings.live_stride        # frames skipped between reads
+        self._latest: Dict[str, bytes] = {}           # camera_id -> latest JPEG bytes
+        self._focus: Optional[str] = None
+        self._rr = 0
+        self._tick = settings.live_tick
+        self._stride = settings.live_stride
 
     # ── Feed mapping ─────────────────────────────────────────────────────────────
 
     def _resolve_feeds(self) -> Dict[str, str]:
-        """
-        feeds.json ({camera_id: path}) if present; otherwise loop the first clip
-        found in feeds_dir across every registered camera.
-        """
         cfg = Path(settings.cameras_dir) / "feeds.json"
         if cfg.exists():
             try:
@@ -72,7 +70,6 @@ class LiveFeedManager:
             self._feeds = self._resolve_feeds()
             if not self._feeds:
                 raise RuntimeError("No feed clips found. Add an .mp4 to trafficVideo/.")
-            Path(settings.live_dir).mkdir(parents=True, exist_ok=True)
 
             for cam, path in self._feeds.items():
                 cap = cv2.VideoCapture(path)
@@ -80,20 +77,21 @@ class LiveFeedManager:
                     log.warning("Cannot open feed for %s: %s", cam, path)
                     continue
                 self._caps[cam] = cap
-                self._pipes[cam] = VideoPipeline(cam)
+                self._pipes[cam] = VideoPipeline(cam, light=settings.live_light_preprocess)
+                meta = camera_registry.camera_meta(cam)
                 self._stats[cam] = {
-                    "camera_id": cam,
-                    "location": camera_registry.camera_meta(cam)["location"],
-                    "zone": camera_registry.camera_meta(cam)["zone"],
+                    "camera_id": cam, "location": meta["location"], "zone": meta["zone"],
                     "clip": os.path.basename(path),
                     "frames": 0, "violations": 0, "by_type": {},
                     "signal_state": "unknown", "last_seen": None, "online": True,
                 }
 
+            if not self._focus and self._caps:
+                self._focus = next(iter(self._caps))   # default focus = first camera
             self._running = True
             self._thread = threading.Thread(target=self._loop, daemon=True)
             self._thread.start()
-            log.info("Live feeds started: %d cameras", len(self._caps))
+            log.info("Live feeds started: %d cameras (focus=%s)", len(self._caps), self._focus)
             return self.status()
 
     def stop(self) -> dict:
@@ -108,59 +106,81 @@ class LiveFeedManager:
                 pass
         self._caps.clear()
         self._pipes.clear()
+        self._latest.clear()
         log.info("Live feeds stopped")
+        return self.status()
+
+    def set_focus(self, camera_id: Optional[str]) -> dict:
+        if camera_id and camera_id in self._caps:
+            self._focus = camera_id
+        elif camera_id is None:
+            self._focus = None
         return self.status()
 
     # ── Worker ───────────────────────────────────────────────────────────────────
 
+    def _process(self, cam: str):
+        cap = self._caps.get(cam)
+        if cap is None:
+            return
+        ok, raw = cap.read()
+        if not ok:                                # clip ended → loop it
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ok, raw = cap.read()
+            if not ok:
+                return
+        # Stride only the non-focus cameras (focus stays frame-accurate/smooth).
+        if cam != self._focus:
+            for _ in range(self._stride):
+                if not cap.grab():
+                    break
+        try:
+            annotated, issued, info = self._pipes[cam].step(raw, time.time())
+        except Exception as exc:
+            log.exception("step failed for %s: %s", cam, exc)
+            return
+
+        ok, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        if ok:
+            self._latest[cam] = buf.tobytes()
+        st = self._stats[cam]
+        st["frames"] += 1
+        st["signal_state"] = info["signal_state"]
+        st["last_seen"] = datetime.now(timezone.utc).isoformat()
+        for rec in issued:
+            st["violations"] += 1
+            st["by_type"][rec.violation_type] = st["by_type"].get(rec.violation_type, 0) + 1
+
     def _loop(self):
         while self._running:
-            for cam, cap in list(self._caps.items()):
+            cams = list(self._caps.keys())
+            if not cams:
+                break
+            schedule: List[str] = []
+            if self._focus in self._caps:
+                schedule.append(self._focus)          # focus every iteration = full rate
+            others = [c for c in cams if c != self._focus]
+            if others:
+                schedule.append(others[self._rr % len(others)])
+                self._rr += 1
+            for cam in schedule:
                 if not self._running:
                     break
-                ok, raw = cap.read()
-                if not ok:                       # clip ended → loop it
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    ok, raw = cap.read()
-                    if not ok:
-                        continue
-                # Stride forward (decode-free grabs) so each processed frame
-                # samples deeper into the clip — violations surface fast.
-                for _ in range(self._stride):
-                    if not cap.grab():
-                        break
-                try:
-                    annotated, issued, info = self._pipes[cam].step(raw, time.time())
-                except Exception as exc:         # never let one camera kill the loop
-                    log.exception("step failed for %s: %s", cam, exc)
-                    continue
-
-                self._write_frame(cam, annotated)
-                st = self._stats[cam]
-                st["frames"] += 1
-                st["signal_state"] = info["signal_state"]
-                st["last_seen"] = datetime.now(timezone.utc).isoformat()
-                for rec in issued:
-                    st["violations"] += 1
-                    st["by_type"][rec.violation_type] = st["by_type"].get(rec.violation_type, 0) + 1
-
-                time.sleep(self._tick)
-
-    def _write_frame(self, cam: str, frame):
-        # Atomic write so the HTTP reader never sees a half-written JPEG.
-        dst = Path(settings.live_dir) / f"{cam}.jpg"
-        tmp = Path(settings.live_dir) / f".{cam}.tmp.jpg"
-        cv2.imwrite(str(tmp), frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        os.replace(tmp, dst)
+                self._process(cam)
+            time.sleep(self._tick)
 
     # ── Read side ────────────────────────────────────────────────────────────────
 
     def status(self) -> dict:
-        return {"running": self._running, "cameras": list(self._stats.values())}
+        return {"running": self._running, "focus": self._focus,
+                "cameras": list(self._stats.values())}
 
-    def frame_path(self, cam: str) -> Optional[str]:
-        p = Path(settings.live_dir) / f"{cam}.jpg"
-        return str(p) if p.exists() else None
+    def latest_jpeg(self, cam: str) -> Optional[bytes]:
+        return self._latest.get(cam)
+
+    @property
+    def running(self) -> bool:
+        return self._running
 
 
 manager = LiveFeedManager()

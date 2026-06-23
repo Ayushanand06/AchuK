@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # Frames to skip between processed frames on a live feed (samples deeper into
     # the clip each tick so violations surface quickly despite CPU limits).
     live_stride: int = 20
+    # Worker sleep between processed frames (smaller = higher fps on GPU).
+    live_tick: float = 0.02
+    # Target fps for the MJPEG stream endpoints (caps repeat rate of latest frame).
+    live_target_fps: int = 15
+    # Use the lightweight preprocess on live feeds (skips slow shadow/rain/temporal
+    # ops) so the GPU isn't stalled by CPU image work. File jobs stay full-quality.
+    live_light_preprocess: bool = True
 
     # ── Model filenames (inside models_dir) ────────────────────────────────────
     helmet_model_file: str = "helmet.pt"

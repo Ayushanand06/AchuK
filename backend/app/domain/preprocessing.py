@@ -45,6 +45,14 @@ class ImagePreprocessor:
         frame = self._suppress_rain(frame)
         return frame
 
+    def process_light(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Fast preprocess for live feeds: resize + CLAHE only. Skips the costly
+        shadow-removal, rain-suppression and temporal-averaging steps so the GPU
+        isn't stalled by CPU image work. Same resize, so pixel calibration holds.
+        """
+        return self._enhance_lighting(self._resize(frame))
+
     # ── Step 1: Resize ────────────────────────────────────────────────────────
 
     def _resize(self, frame: np.ndarray) -> np.ndarray:

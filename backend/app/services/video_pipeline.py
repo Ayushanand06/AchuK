@@ -61,11 +61,13 @@ class ViolationThrottle:
 class VideoPipeline:
     """Process one video for a given (calibrated) camera."""
 
-    def __init__(self, camera_id: Optional[str], progress_cb: Optional[Callable] = None):
+    def __init__(self, camera_id: Optional[str], progress_cb: Optional[Callable] = None,
+                 light: bool = False):
         self.camera_id = camera_id
         self.meta = camera_registry.camera_meta(camera_id)
         self.calib = camera_registry.get_calibration(camera_id)
         self.progress_cb = progress_cb
+        self.light = light          # live feeds use the fast preprocess path
 
         # Shared heavy objects (cached singletons).
         self.preprocessor = ImagePreprocessor()
@@ -123,7 +125,8 @@ class VideoPipeline:
         `clock` is the time (seconds) used for duplicate-suppression cooldown —
         video time for files, wall-clock for live feeds.
         """
-        frame = self.preprocessor.process(raw_frame, is_video=True)
+        frame = (self.preprocessor.process_light(raw_frame) if self.light
+                 else self.preprocessor.process(raw_frame, is_video=True))
         lighting = self.preprocessor.lighting_score(frame)
         motion = (self.preprocessor.motion_magnitude(self._prev_frame, frame)
                   if self._prev_frame is not None else 0.0)
