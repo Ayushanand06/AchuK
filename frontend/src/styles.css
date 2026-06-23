@@ -1,23 +1,37 @@
+:root {
+  --app-bg: #0E1116;
+  --scroll-thumb: #252A33;
+  --scroll-track: #0E1116;
+  --sel: #36C5C033;
+}
+
+:root[data-theme="light"] {
+  --app-bg: #F4F6F9;
+  --scroll-thumb: #C9D2DE;
+  --scroll-track: #EDF1F6;
+  --sel: #2F6FBF22;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root {
   margin: 0;
   padding: 0;
-  background: #0E1116;
+  background: var(--app-bg);
   min-height: 100vh;
 }
 
 body {
-  color: #E6E9EF;
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.2s ease;
 }
 
-::selection { background: #36C5C033; }
+::selection { background: var(--sel); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #252A33; border-radius: 8px; }
-::-webkit-scrollbar-track { background: #0E1116; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 8px; }
+::-webkit-scrollbar-track { background: var(--scroll-track); }
 
 @keyframes vePulse {
   0% { opacity: 1; }
@@ -26,4 +40,4 @@ body {
 }
 
 a { color: inherit; }
-input::placeholder { color: #5C6675; }
+input::placeholder { color: #8A94A6; }

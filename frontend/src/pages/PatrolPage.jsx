@@ -12,7 +12,7 @@ const PRIORITY = {
 }
 const FILTERS = ['all', 'critical', 'high', 'predicted']
 
-export default function PatrolPage({ page, onNavigate }) {
+export default function PatrolPage({ page, onNavigate, theme, onToggleTheme }) {
   const mapObj = useRef(null)
   const markers = useRef([])
   const [recs, setRecs] = useState([])
@@ -73,7 +73,7 @@ export default function PatrolPage({ page, onNavigate }) {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.text, fontFamily: FONT.sans, overflow: 'hidden' }}>
-      <Header page={page} onNavigate={onNavigate} />
+      <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* MAP */}

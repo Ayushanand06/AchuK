@@ -1,4 +1,4 @@
-# VisionEnforce — Frontend (Analytics & Reporting)
+# AchuK — Frontend (Traffic Violation Intelligence)
 
 React + Vite (plain JS) dashboard implementing the **Analytics & reporting**
 design, wired to the FastAPI backend.

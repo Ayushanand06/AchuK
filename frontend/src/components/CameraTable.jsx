@@ -49,6 +49,7 @@ export default function CameraTable({ data }) {
       ) : (
         rows.map((cam) => {
           const m = STATUS_META[cam.status] || STATUS_META.ok
+          const mColor = C[m.colorKey]
           const flag = cam.status === 'flag'
           return (
             <div key={cam.id} style={{
@@ -67,8 +68,8 @@ export default function CameraTable({ data }) {
               </span>
               <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <span style={{
-                  fontSize: 11, fontWeight: 500, color: m.color, background: m.color + '14',
-                  border: `1px solid ${m.color}40`, borderRadius: 6, padding: '3px 9px', whiteSpace: 'nowrap',
+                  fontSize: 11, fontWeight: 500, color: mColor, background: mColor + '14',
+                  border: `1px solid ${mColor}40`, borderRadius: 6, padding: '3px 9px', whiteSpace: 'nowrap',
                 }}>{m.label}</span>
               </span>
             </div>

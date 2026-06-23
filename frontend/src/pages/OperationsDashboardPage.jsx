@@ -8,7 +8,7 @@ const HOUR_TICKS = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00
 
 function pct(x) { return x == null ? '—' : (x * 100).toFixed(1) }
 
-export default function OperationsDashboardPage({ page, onNavigate }) {
+export default function OperationsDashboardPage({ page, onNavigate, theme, onToggleTheme }) {
   const [weekly, setWeekly] = useState(null)
   const [kpis, setKpis] = useState(null)
   const [buckets, setBuckets] = useState(null)
@@ -47,7 +47,7 @@ export default function OperationsDashboardPage({ page, onNavigate }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT.sans }}>
-      <Header page={page} onNavigate={onNavigate} />
+      <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
       <main style={{ maxWidth: 1480, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>

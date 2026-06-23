@@ -11,7 +11,7 @@ import CameraTable from '../components/CameraTable.jsx'
 
 const RANGE_LABEL = 'Last 7 days'
 
-export default function AnalyticsPage({ page = 'analytics', onNavigate }) {
+export default function AnalyticsPage({ page = 'analytics', onNavigate, theme, onToggleTheme }) {
   const [weekly, setWeekly] = useState(null)
   const [zoneHour, setZoneHour] = useState(null)
   const [cameras, setCameras] = useState(null)
@@ -50,14 +50,14 @@ export default function AnalyticsPage({ page = 'analytics', onNavigate }) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'visionenforce-analytics.json'
+    a.download = 'achuk-analytics.json'
     a.click()
     URL.revokeObjectURL(url)
   }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT.sans }}>
-      <Header page={page} onNavigate={onNavigate} />
+      <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
 
       <main style={{ maxWidth: 1480, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>

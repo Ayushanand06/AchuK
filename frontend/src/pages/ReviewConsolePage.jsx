@@ -14,7 +14,7 @@ const FACTOR_LABELS = [
   ['camera_trust', 'Camera trust'],
 ]
 
-export default function ReviewConsolePage({ page, onNavigate }) {
+export default function ReviewConsolePage({ page, onNavigate, theme, onToggleTheme }) {
   const [queue, setQueue] = useState([])
   const [sel, setSel] = useState(0)
   const [plate, setPlate] = useState('')
@@ -73,7 +73,7 @@ export default function ReviewConsolePage({ page, onNavigate }) {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.text, fontFamily: FONT.sans, overflow: 'hidden' }}>
-      <Header page={page} onNavigate={onNavigate} />
+      <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* LEFT: queue */}

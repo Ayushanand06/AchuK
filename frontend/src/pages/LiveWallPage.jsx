@@ -3,7 +3,7 @@ import { C, FONT } from '../theme.js'
 import { api } from '../api.js'
 import Header from '../components/Header.jsx'
 
-export default function LiveWallPage({ page, onNavigate }) {
+export default function LiveWallPage({ page, onNavigate, theme, onToggleTheme }) {
   const [status, setStatus] = useState({ running: false, cameras: [] })
   const [busy, setBusy] = useState(false)
   const [tick, setTick] = useState(0)            // drives frame cache-busting
@@ -34,7 +34,7 @@ export default function LiveWallPage({ page, onNavigate }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT.sans }}>
-      <Header page={page} onNavigate={onNavigate} />
+      <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
       <main style={{ maxWidth: 1480, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
           <div>

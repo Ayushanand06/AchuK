@@ -9,7 +9,7 @@ const NAV = [
   { label: 'Analytics', key: 'analytics' },
 ]
 
-export default function Header({ page = 'analytics', onNavigate }) {
+export default function Header({ page = 'analytics', onNavigate, theme = 'dark', onToggleTheme }) {
   return (
     <header
       style={{
@@ -26,7 +26,7 @@ export default function Header({ page = 'analytics', onNavigate }) {
         }}>
           <div style={{ width: 9, height: 9, background: C.text, transform: 'rotate(45deg)', borderRadius: 1 }} />
         </div>
-        <span style={{ fontSize: 15, fontWeight: 500, letterSpacing: '.2px' }}>VisionEnforce</span>
+        <span style={{ fontSize: 15, fontWeight: 500, letterSpacing: '.2px' }}>AchuK</span>
       </div>
 
       <nav style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 8 }}>
@@ -54,6 +54,17 @@ export default function Header({ page = 'analytics', onNavigate }) {
       </nav>
 
       <div style={{ flex: 1 }} />
+
+      <button
+        onClick={onToggleTheme}
+        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        aria-label="Toggle theme"
+        style={{
+          width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
+          background: C.panel2, border: `1px solid ${C.border}`, color: C.text,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
+        }}
+      >{theme === 'dark' ? '☀' : '☾'}</button>
 
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,

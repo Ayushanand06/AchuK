@@ -8,7 +8,7 @@ import Panel from '../components/Panel.jsx'
 const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 } // Bengaluru
 const DEFAULT_ZOOM = 11
 
-export default function MapPage({ page, onNavigate }) {
+export default function MapPage({ page, onNavigate, theme, onToggleTheme }) {
   const mapEl = useRef(null)
   const mapObj = useRef(null)
   const [status, setStatus] = useState('loading') // loading | ready | error | nokey
@@ -37,7 +37,7 @@ export default function MapPage({ page, onNavigate }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT.sans }}>
-      <Header page={page} onNavigate={onNavigate} />
+      <Header page={page} onNavigate={onNavigate} theme={theme} onToggleTheme={onToggleTheme} />
       <main style={{ maxWidth: 1480, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 21, fontWeight: 500 }}>Violation map</h1>
